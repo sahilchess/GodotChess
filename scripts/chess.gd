@@ -34,6 +34,9 @@ const PIECE_MOVE = preload("res://assets/Piece_move.png")
 @onready var dots = $Dots
 @onready var turn = $Turn
 
+@onready var white_pieces: Control = $"../CanvasLayer/white_pieces"
+@onready var black_pieces: Control = $"../CanvasLayer/black_pieces"
+
 # varibles
 # -6 black king
 # -5 black queen
@@ -55,6 +58,17 @@ var state : bool = false
 var moves = []
 var selected_piece : Vector2
 
+var promotion_square = null
+
+var white_king = false
+var black_king = false
+var white_rook_left = false
+var white_rook_right = false
+var black_rook_left = false
+var black_rook_right = false
+
+var en_passant = null
+
 
 # Called when the node enters the scene tree for the first time.
 func _ready() -> void:
@@ -68,9 +82,18 @@ func _ready() -> void:
 	board.append([-4,-2,-3,-5,-6,-3,-2,-4])
 	
 	display_board()
+	var white_buttons = get_tree().get_nodes_in_group("white_pieces")
+	var black_buttons = get_tree().get_nodes_in_group("black_pieces")
+	
+	for button in white_buttons:
+		button.pressed.connect(self._on_button_pressed.bind(button))
+	
+	for button in black_buttons:
+		button.pressed.connect(self._on_button_pressed.bind(button))
 	
 func _input(event):
-	if event is InputEventMouseButton && event.pressed:
+
+	if event is InputEventMouseButton && event.pressed && promotion_square == null:
 		if event.button_index == MOUSE_BUTTON_LEFT:
 			if is_mouse_out(): return
 			var var1 = abs(snapped(get_global_mouse_position().x, 0)) / CELL_WIDTH
@@ -80,6 +103,7 @@ func _input(event):
 				show_options()
 				state = true
 			elif state: set_move(var2, var1)
+
 func is_mouse_out():
 	if get_global_mouse_position().x < 0 || get_global_mouse_position().x > 144 || get_global_mouse_position().y > 0  || get_global_mouse_position().y < -144: return true
 	return false
@@ -108,7 +132,9 @@ func display_board():
 				2: holder.texture = WHITE_KNIGHT
 				1: holder.texture = WHITE_PAWN
 				
-		
+	if white: turn.texture = TURN_WHITE
+	else: turn.texture = TURN_BLACK
+	
 func show_options():
 	moves = get_moves()
 	if moves == []:
@@ -128,8 +154,63 @@ func show_dots():
 		holder.global_position = Vector2(i.y * CELL_WIDTH + (CELL_WIDTH / 2), -i.x * CELL_WIDTH - (CELL_WIDTH / 2))
 	
 func set_move(var2, var1):
+	var just_now = false
+	
 	for i in moves:
 		if i.x == var2 && i.y == var1:
+			match board[selected_piece.x][selected_piece.y]:
+				1:
+					if i.x == 7: promote(i)
+					if i.x == 3 && selected_piece.x == 1:
+						en_passant = i
+						just_now = true
+					elif en_passant != null:
+						if en_passant.y == i.y && selected_piece.y != i.y && en_passant.x== selected_piece.x:
+							board[en_passant.x][en_passant.y] = 0
+				-1: 
+					if i.x == 0: promote(i)
+					if i.x == 4 && selected_piece.x == 6:
+						en_passant = i
+						just_now = true
+					elif en_passant != null:
+						if en_passant.y == i.y && selected_piece.y != i.y && en_passant.x== selected_piece.x:
+							board[en_passant.x][en_passant.y] = 0
+				4:
+					if selected_piece.x == 0 && selected_piece.y == 0: white_rook_left = true
+					elif selected_piece.x == 0 && selected_piece.y == 7: white_rook_right = true
+				-4:
+					if selected_piece.x == 7 && selected_piece.y == 0: black_rook_left = true
+					elif selected_piece.x == 7 && selected_piece.y == 7: black_rook_right = true
+					
+				6:
+					if selected_piece.x == 0 && selected_piece.y == 4:
+						white_king = true
+						if i.y == 2:
+							white_rook_left = true
+							white_rook_right = true
+							board[0][0] = 0
+							board[0][3] = 4
+						elif i.y == 6:
+							white_rook_left = true
+							white_rook_right = true
+							board[0][7] = 0
+							board[0][5] = 4
+				-6:
+					if selected_piece.x == 7 && selected_piece.y == 4:
+						black_king = true
+						if i.y == 2:
+							black_rook_left = true
+							black_rook_right = true
+							board[7][0] = 0
+							board[7][3] = -4
+						elif i.y == 6:
+							black_rook_left = true
+							black_rook_right = true
+							board[7][7] = 0
+							board[7][5] = -4
+
+			if !just_now: en_passant = null
+			
 			board[var2][var1] = board[selected_piece.x][selected_piece.y]
 			board[selected_piece.x][selected_piece.y] = 0
 			white = !white
@@ -139,7 +220,7 @@ func set_move(var2, var1):
 	delete_dots()
 	state = false
 	
-	
+	# get moves 
 	
 func get_moves():
 	var _moves = []
@@ -153,7 +234,6 @@ func get_moves():
 		
 	return _moves
 	
-	
 func get_pawn_moves():
 	var _moves = []
 	var direction
@@ -163,6 +243,10 @@ func get_pawn_moves():
 	else: direction = Vector2(-1,0)
 	
 	if white && selected_piece.x == 1 || !white && selected_piece.x == 6: is_first_move = true
+	
+	if en_passant != null && (white && selected_piece.x == 4 || !white && selected_piece.x == 3) && abs(en_passant.y-selected_piece.y) == 1:
+		_moves.append(en_passant+direction)
+	
 	var pos =  selected_piece + direction
 	
 	if is_empty(pos): _moves.append(pos)
@@ -250,14 +334,23 @@ func get_king_moves():
 			if is_empty(pos): _moves.append(pos)
 			elif is_enemy(pos):
 				_moves.append(pos)
-
+	
+	if white && !white_king:
+		if !white_rook_left && is_empty(Vector2(0,1)) && is_empty(Vector2(0,2)) && is_empty(Vector2(0,3)):
+			_moves.append(Vector2(0,2))
+		if !white_rook_right && is_empty(Vector2(0,5)) && is_empty(Vector2(0,6)):
+			_moves.append(Vector2(0,6))
+	
+	elif !white && !black_king:
+		if !black_rook_left && is_empty(Vector2(7,1)) && is_empty(Vector2(7,2)) && is_empty(Vector2(7,3)):
+			_moves.append(Vector2(7,2))
+		if !black_rook_right && is_empty(Vector2(7,5)) && is_empty(Vector2(7,6)):
+			_moves.append(Vector2(7,6))
+	
 	return _moves
 	
-
-
- 
-
-
+	
+	
 func is_valid_position(pos:Vector2):
 	if pos.x >= 0 && pos.x < BOARD_SIZE && pos.y >= 0 && pos.y < BOARD_SIZE: return true
 	return false
@@ -269,3 +362,16 @@ func is_empty(pos: Vector2):
 func is_enemy(pos: Vector2):
 	if white && board[pos.x][pos.y] < 0 || !white && board[pos.x][pos.y] > 0: return true
 	return false
+
+func promote(_var: Vector2):
+	promotion_square = _var
+	white_pieces.visible = white
+	black_pieces.visible = !white
+	
+func _on_button_pressed(button):
+	var num_char = int(button.name.substr(0,1))
+	board[promotion_square.x][promotion_square.y] = -num_char if white else num_char
+	white_pieces.visible = false
+	black_pieces.visible = false
+	promotion_square = null
+	display_board()

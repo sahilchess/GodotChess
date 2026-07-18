@@ -13,3 +13,5 @@ script = ExtResource("2_nglv8")
 [node name="Dots" type="Node2D" parent="." unique_id=1733609267]
 
 [node name="Turn" type="Sprite2D" parent="." unique_id=1392109368]
+modulate = Color(1, 1, 1, 0.5882353)
+z_index = -10
