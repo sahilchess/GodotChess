@@ -9,6 +9,7 @@
 [ext_resource type="Texture2D" uid="uid://bhr8c2pb02smt" path="res://assets/black_rook.png" id="5_choun"]
 [ext_resource type="Texture2D" uid="uid://bmmt31nb526bf" path="res://assets/black_bishop.png" id="6_choun"]
 [ext_resource type="Texture2D" uid="uid://bs6nmydq4udho" path="res://assets/black_queen.png" id="8_ya4ey"]
+[ext_resource type="FontFile" uid="uid://x5gw1kn7xf1l" path="res://assets/Planes_ValMore.ttf" id="10_choun"]
 
 [sub_resource type="StyleBoxTexture" id="StyleBoxTexture_3i36n"]
 texture = ExtResource("1_tefeu")
@@ -81,6 +82,9 @@ texture = ExtResource("8_ya4ey")
 [sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_ev1yb"]
 
 [sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_71de0"]
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_8qaqk"]
+bg_color = Color(0.75017357, 0, 0.118855275, 1)
 
 [node name="Main" type="Node2D" unique_id=1052450124]
 
@@ -259,3 +263,15 @@ theme_override_styles/focus = SubResource("StyleBoxEmpty_71de0")
 [node name="Board" parent="." unique_id=581306017 instance=ExtResource("1_o5qli")]
 position = Vector2(72, -72.00001)
 scale = Vector2(1, 0.99999994)
+
+[node name="outcome" type="Label" parent="." unique_id=1833338780]
+offset_left = 2.0
+offset_top = -84.0
+offset_right = 142.0
+offset_bottom = -61.0
+theme_override_fonts/font = ExtResource("10_choun")
+theme_override_font_sizes/font_size = 8
+theme_override_styles/normal = SubResource("StyleBoxFlat_8qaqk")
+text = "DRAW: INSUFFICIENT MATERIAL"
+horizontal_alignment = 1
+vertical_alignment = 1

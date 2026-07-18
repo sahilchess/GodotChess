@@ -33,6 +33,7 @@ const PIECE_MOVE = preload("res://assets/Piece_move.png")
 @onready var pieces = $Pieces
 @onready var dots = $Dots
 @onready var turn = $Turn
+@onready var outcome: Label = $"../outcome"
 
 @onready var white_pieces: Control = $"../CanvasLayer/white_pieces"
 @onready var black_pieces: Control = $"../CanvasLayer/black_pieces"
@@ -74,9 +75,14 @@ var black_king_pos = Vector2(7,4)
 
 var fifty_move_rule = 0 
 
+var unique_board_moves : Array = []
+var amount_of_smae : Array = []
+
+
 
 # Called when the node enters the scene tree for the first time.
 func _ready() -> void:
+	outcome.visible = false
 	board.append([4,2,3,5,6,3,2,4])
 	board.append([1,1,1,1,1,1,1,1])
 	board.append([0,0,0,0,0,0,0,0])
@@ -103,7 +109,7 @@ func _input(event):
 			if is_mouse_out(): return
 			var var1 = abs(snapped(get_global_mouse_position().x, 0)) / CELL_WIDTH
 			var var2 = abs(snapped(get_global_mouse_position().y, 0)) / CELL_WIDTH
-			if !state && (white && board[var2][var1] > 0) || (!white && board[var2][var1] < 0):
+			if !state && ((white && board[var2][var1] > 0) || (!white && board[var2][var1] < 0)):
 				selected_piece = Vector2(var2, var1)
 				show_options()
 				state = true
@@ -228,23 +234,34 @@ func set_move(var2, var1):
 			board[var2][var1] = board[selected_piece.x][selected_piece.y]
 			board[selected_piece.x][selected_piece.y] = 0
 			white = !white
+			threefold_position(board)
 			display_board()
 			break
 			
 	delete_dots()
 	state = false
 	
-	if (selected_piece.x != var2 || selected_piece != var1) && (white && board[var2][var1] > 0 || !white && board[var2][var1] < 0):
+	if (selected_piece.x != var2 || selected_piece.y != var1) && (white && board[var2][var1] > 0 || !white && board[var2][var1] < 0):
 		selected_piece = Vector2(var2, var1)
 		show_options()
 		state = true
 	
 	elif is_stalemate():
-		if white && is_in_check(white_king_pos) || !white && is_in_check(black_king_pos): print("CHECKMATE")
-		else: print("DRAW: STALEMATE")
+		if white && is_in_check(white_king_pos) || !white && is_in_check(black_king_pos): 
+			outcome.visible = true
+			outcome.text = "CHECKMATE"
+		else: 
+			outcome.visible = true
+			outcome.text = "DRAW: STALEMATE"
+			
 		
 	if fifty_move_rule == 50:
-		print("DRAW: FIFTY MOVE RULE")
+		outcome.visible = true
+		outcome.text = "DRAW: FIFTY MOVE RULE"
+	
+	if insuficient_material():
+		outcome.visible = true
+		outcome.text = "DRAW: INSUFFICIENT MATERIAL"
 	
 	# get moves 
 	
@@ -556,13 +573,39 @@ func is_stalemate():
 	
 	
 func insuficient_material():
-	var white_pieces = 0
-	var black_pieces = 0
+	var white_piece = 0
+	var black_piece = 0
 	
 	for i in BOARD_SIZE:
 			for j in BOARD_SIZE:
 				match board[i][j]:
 					2,3:
+						if white_piece == 0: white_piece +=1
+						else: return false
 					-2,-3:
+						if black_piece == 0: black_piece +=1
+						else: return false
 					6,-6,0:
+						pass
 					_:
+						return false
+	return true
+
+func threefold_position(var1 : Array):
+	for i in unique_board_moves.size():
+		if var1 == unique_board_moves[i]:
+			amount_of_smae[i] += 1
+			if amount_of_smae[i] >= 3: 
+				outcome.visible = true
+				outcome.text = "DRAW: THREEFOLD" 
+			return
+	unique_board_moves.append(var1.duplicate(true))
+	amount_of_smae.append(1)
+			
+			
+			
+			
+			
+			
+			
+			
